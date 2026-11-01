@@ -1,0 +1,30 @@
+# Format, vet, the tests with the race detector, the scenario binding, and the
+# proof that the binding can fail. Free on a public repository.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: vet
+        run: go vet ./...
+      - name: tests
+        run: go test -race -count=1 ./...
+      - name: fuzz the page reader
+        run: go test -run '^$' -fuzz '^FuzzReadPage$' -fuzztime 30s .
+      - name: the scenario binding has teeth
+        run: scripts/gates-have-teeth.sh
